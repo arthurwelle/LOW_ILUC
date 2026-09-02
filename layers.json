@@ -1,0 +1,250 @@
+[
+  {
+    "id": "soja_1_safra",
+    "file": "./COG/soja_1_safra.tif",
+    "label": "soja_1_safra",
+    "type": "continuous",
+    "domain": [
+      0,
+      100
+    ],
+    "scheme": "YlGnBu",
+    "reverse": false,
+    "nodata": 255,
+    "hideValues": [
+      0
+    ],
+    "lowValue": {
+      "max": 10,
+      "color": "#bdbdbd",
+      "label": "Muito baixo (< 10)"
+    },
+    "unit": "",
+    "description": "Área de soja de 1ª safra (0–100 por célula de 300 m). 0 = NA; abaixo de 10 em cinza."
+  },
+  {
+    "id": "segunda_safra",
+    "file": "./COG/segunda_safra.tif",
+    "label": "segunda_safra",
+    "type": "continuous",
+    "domain": [
+      0,
+      100
+    ],
+    "scheme": "YlGnBu",
+    "reverse": false,
+    "nodata": 255,
+    "hideValues": [
+      0
+    ],
+    "lowValue": {
+      "max": 10,
+      "color": "#bdbdbd",
+      "label": "Muito baixo (< 10)"
+    },
+    "unit": "",
+    "description": "Área com 2ª safra (0–100 por célula de 300 m). 0 = NA; abaixo de 10 em cinza."
+  },
+  {
+    "id": "area_potencial",
+    "file": "./COG/area_potencial.tif",
+    "label": "area_potencial",
+    "type": "continuous",
+    "domain": [
+      0,
+      100
+    ],
+    "scheme": "RdYlGn",
+    "reverse": false,
+    "nodata": 255,
+    "hideValues": [
+      0
+    ],
+    "lowValue": {
+      "max": 10,
+      "color": "#bdbdbd",
+      "label": "Muito baixo (< 10)"
+    },
+    "unit": "",
+    "description": "Área potencial (atual). 0 = NA (transparente); abaixo de 10 em cinza."
+  },
+  {
+    "id": "area_potencial2016",
+    "file": "./COG/area_potencial2016.tif",
+    "label": "area_potencial2016",
+    "type": "continuous",
+    "domain": [
+      0,
+      100
+    ],
+    "scheme": "RdYlGn",
+    "reverse": false,
+    "nodata": 255,
+    "hideValues": [
+      0
+    ],
+    "lowValue": {
+      "max": 10,
+      "color": "#bdbdbd",
+      "label": "Muito baixo (< 10)"
+    },
+    "unit": "",
+    "description": "Área potencial (pré-2016). 0 = NA (transparente); abaixo de 10 em cinza."
+  },
+  {
+    "id": "area_potencial2008",
+    "file": "./COG/area_potencial2008.tif",
+    "label": "area_potencial2008",
+    "type": "continuous",
+    "domain": [
+      0,
+      100
+    ],
+    "scheme": "RdYlGn",
+    "reverse": false,
+    "nodata": 255,
+    "hideValues": [
+      0
+    ],
+    "lowValue": {
+      "max": 10,
+      "color": "#bdbdbd",
+      "label": "Muito baixo (< 10)"
+    },
+    "unit": "",
+    "description": "Área potencial (pré-2008). 0 = NA (transparente); abaixo de 10 em cinza."
+  },
+  {
+    "id": "solo",
+    "file": "./COG/solo.tif",
+    "label": "solo",
+    "type": "categorical",
+    "nodata": 255,
+    "hideValues": [
+      0
+    ],
+    "description": "Classe de água disponível no solo (AD-1..AD-6). Classe 0 tratada como NA.",
+    "classes": [
+      {
+        "v": 1,
+        "label": "AD-1",
+        "color": "#E41A1C"
+      },
+      {
+        "v": 2,
+        "label": "AD-2",
+        "color": "#377EB8"
+      },
+      {
+        "v": 3,
+        "label": "AD-3",
+        "color": "#4DAF4A"
+      },
+      {
+        "v": 4,
+        "label": "AD-4",
+        "color": "#984EA3"
+      },
+      {
+        "v": 5,
+        "label": "AD-5",
+        "color": "#FF7F00"
+      },
+      {
+        "v": 6,
+        "label": "AD-6",
+        "color": "#A65628"
+      }
+    ]
+  },
+  {
+    "id": "pam_produtividade_media",
+    "file": "./COG/pam_produtividade_media.tif",
+    "label": "pam_produtividade_media",
+    "type": "continuous",
+    "domain": [
+      0,
+      10545
+    ],
+    "scheme": "YlGnBu",
+    "reverse": false,
+    "nodata": 65535,
+    "unit": "kg/ha",
+    "description": "Produtividade média do milho 2ª safra (PAM/IBGE, média 2020–2024)."
+  },
+  {
+    "id": "areas_conservacao",
+    "file": "./COG/areas_conservacao.tif",
+    "label": "areas_conservacao",
+    "type": "categorical",
+    "nodata": 255,
+    "description": "Áreas de conservação (máscara: 1 = unidade de conservação / terra indígena / quilombola).",
+    "classes": [
+      {
+        "v": 1,
+        "label": "Área de conservação",
+        "color": "#3182bd"
+      }
+    ]
+  },
+  {
+    "id": "n20_lag100_abertura_20",
+    "file": "./COG/cen_n20_lag100_abertura_20.tif",
+    "label": "n20_lag100_abertura_20",
+    "type": "categorical",
+    "nodata": 255,
+    "description": "Cenário de risco — risco até 20 %, soja ciclo 100 d (classes 0–3): aptidão para 2ª safra.",
+    "classes": [
+      {
+        "v": 0,
+        "label": "Sem aptidão 2ª safra",
+        "color": "#ffffff"
+      },
+      {
+        "v": 1,
+        "label": "baixa aptidão para 2ª safra (33% área)",
+        "color": "#fee08b"
+      },
+      {
+        "v": 2,
+        "label": "média aptidão para 2ª safra (67% área)",
+        "color": "#fc8d59"
+      },
+      {
+        "v": 3,
+        "label": "alta aptidão para 2ª safra (100% área)",
+        "color": "#d73027"
+      }
+    ]
+  },
+  {
+    "id": "n30_lag100_abertura_30",
+    "file": "./COG/cen_n30_lag100_abertura_30.tif",
+    "label": "n30_lag100_abertura_30",
+    "type": "categorical",
+    "nodata": 255,
+    "description": "Cenário de risco — risco até 30 %, soja ciclo 100 d (classes 0–3): aptidão para 2ª safra.",
+    "classes": [
+      {
+        "v": 0,
+        "label": "Sem aptidão 2ª safra",
+        "color": "#ffffff"
+      },
+      {
+        "v": 1,
+        "label": "baixa aptidão para 2ª safra (33% área)",
+        "color": "#fee08b"
+      },
+      {
+        "v": 2,
+        "label": "média aptidão para 2ª safra (67% área)",
+        "color": "#fc8d59"
+      },
+      {
+        "v": 3,
+        "label": "alta aptidão para 2ª safra (100% área)",
+        "color": "#d73027"
+      }
+    ]
+  }
+]

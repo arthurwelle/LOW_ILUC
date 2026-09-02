@@ -1,0 +1,21 @@
+# --- so local: pesados e nao usados em runtime ---
+COG_local/
+layers.local.json
+
+# insumos de build (o site nao le nenhum destes).
+# ATENCAO: .gitignore nao aceita comentario na mesma linha do padrao.
+DATA/*.gz
+# entrada do build_raio_pmtiles.sh; o site usa o .pmtiles
+DATA/raio_minimo.geojson
+# grades/intermediarios (ex. _uf_grid.tif, _raio_niveis.gpkg)
+DATA/_*
+
+# fontes vetoriais nao usadas: o app le so os .pmtiles
+GEO/mun.gpkg
+GEO/municipios.geojson
+GEO/ocean_mask.geojson
+
+# sobras de ferramenta
+__pycache__/
+*.bak
+*.aux.xml

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Explorador de rasters — MAPBIOMAS</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <link rel="stylesheet" href="./style.css" />
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
+  <script src="https://unpkg.com/@geomatico/maplibre-cog-protocol/dist/index.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <aside id="panel">
+      <h1>Rasters MAPBIOMAS</h1>
+      <p class="hint">Explore índices de potencial e risco. Passe o mouse para ler o valor do pixel.</p>
+
+      <section>
+        <h2>Camada</h2>
+        <div id="layer-list"></div>
+      </section>
+
+      <section>
+        <h2>Legenda</h2>
+        <div id="legend"></div>
+      </section>
+
+      <p class="desc" id="layer-desc"></p>
+
+      <section>
+        <h2>Raio mínimo de captação</h2>
+        <label class="layer-item" id="raios-toggle-wrap">
+          <input type="checkbox" id="raios-toggle"><span>Mostrar pontos</span>
+        </label>
+        <div id="raios-meta"></div>
+        <div id="raios-cenario"></div>
+        <div id="raios-corte-wrap">
+          <label for="raios-corte" id="raios-corte-rotulo">Raio máximo: 200 km</label>
+          <input type="range" id="raios-corte" min="0" max="200" step="5" value="200">
+        </div>
+        <div id="raios-legenda"></div>
+        <p class="raios-clique" id="raios-clique"></p>
+      </section>
+
+      <section>
+        <h2>Risco por decêndio</h2>
+        <p class="hint" id="risco-hint">Passe o mouse num município no mapa.</p>
+        <div id="risco-legend"></div>
+        <div id="risco-table-wrap">
+          <table id="risco-table"></table>
+        </div>
+      </section>
+      <p class="credit">© OpenStreetMap · OpenFreeMap · dados: MAPBIOMAS / EMBRAPA</p>
+    </aside>
+
+    <main id="map"></main>
+
+    <aside id="resumo">
+      <h2>Área e quantidade por UF</h2>
+      <div id="resumo-metrica"></div>
+      <div id="resumo-total"></div>
+      <div id="resumo-wrap"><table id="resumo-tabela"></table></div>
+      <p class="resumo-nota" id="resumo-nota"></p>
+    </aside>
+  </div>
+
+  <script src="./script.js" defer></script>
+</body>
+</html>
