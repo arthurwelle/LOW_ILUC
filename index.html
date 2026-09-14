@@ -58,7 +58,13 @@
       <p class="credit">© OpenStreetMap · OpenFreeMap · dados: MAPBIOMAS / EMBRAPA</p>
     </aside>
 
-    <main id="map"></main>
+    <div id="map-wrap">
+      <main id="map"></main>
+      <button class="colapsar-lateral" id="colapsar-panel" data-alvo="panel"
+              title="Colapsar painel esquerdo" aria-expanded="true">‹</button>
+      <button class="colapsar-lateral" id="colapsar-resumo" data-alvo="resumo"
+              title="Colapsar painel direito" aria-expanded="true">›</button>
+    </div>
 
     <aside id="resumo">
       <h2>Área e quantidade por UF</h2>

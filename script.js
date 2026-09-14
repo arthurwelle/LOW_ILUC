@@ -527,6 +527,22 @@ const curto = (nome) => {
   return m ? `Cen. ${m[1]}` : nome;
 };
 
+// Captado = producao/area na UNIAO dos circulos de raio minimo visiveis (cenario,
+// porte e corte do painel esquerdo), sem contar sobreposicao duas vezes.
+// Pre-calculado por build_captacao.py para as 41 posicoes do slider.
+let CAPTACAO = null;
+
+function captado(uf) {
+  if (!CAPTACAO || !raiosCenario || !raiosMeta) return null;
+  const porUf = ((CAPTACAO.dados[raiosCenario] || {})[String(raiosMeta)]) || {};
+  const campo = resumoMetrica === 'area' ? 'area_ha' : 'qtd_t';
+  const i = Math.round(raiosCorte / CAPTACAO.passo_km);
+  const serie = (uf === null)
+    ? Object.values(porUf).map((d) => d[campo])
+    : [porUf[uf] ? porUf[uf][campo] : null];
+  return serie.reduce((s, v) => s + (v ? v[Math.min(i, v.length - 1)] : 0), 0);
+}
+
 function renderResumo() {
   const metEl = document.getElementById('resumo-metrica');
   const totEl = document.getElementById('resumo-total');
@@ -549,18 +565,29 @@ function renderResumo() {
 
   const campo = (cen) => `${M.prefixo}${cen}${M.sufixo}`;
   const t = RESUMO.totais;
+  const capTot = captado(null);
+  const selecao = raiosCenario && raiosMeta
+    ? `${curto(raiosCenario)} · ${raiosMeta >= 1000 ? `${raiosMeta / 1000} Mt` : `${raiosMeta} mil t`} · ≤ ${raiosCorte} km`
+    : '';
   totEl.innerHTML =
     `<div class="resumo-total-linha"><span>Total (sem cenário)</span><strong>${fmt(t[M.campoTotal], M.casas)}</strong></div>` +
     cens.map((c) =>
       `<div class="resumo-total-linha"><span>${curto(c)}</span><strong>${fmt(t[campo(c)], M.casas)}</strong></div>`
-    ).join('');
+    ).join('') +
+    (capTot === null ? '' :
+      `<div class="resumo-total-linha resumo-captado"><span>Captado (${selecao})</span><strong>${fmt(capTot, M.casas)}</strong></div>`);
 
+  const celCap = (uf) => {
+    const v = captado(uf);
+    return `<td class="resumo-captado">${v === null ? '—' : fmt(v, M.casas)}</td>`;
+  };
   tabEl.innerHTML =
-    `<thead><tr><th>UF</th><th>Total</th>${cens.map((c) => `<th title="${c}">${curto(c)}</th>`).join('')}</tr></thead>` +
+    `<thead><tr><th>UF</th><th>Total</th>${cens.map((c) => `<th title="${c}">${curto(c)}</th>`).join('')}` +
+    `<th class="resumo-captado" title="União dos círculos de raio mínimo visíveis: ${selecao}">Captado</th></tr></thead>` +
     '<tbody>' +
     RESUMO.ufs.map((r) =>
       `<tr><td>${r.uf}</td><td>${fmt(r[M.campoTotal], M.casas)}</td>` +
-      cens.map((c) => `<td>${fmt(r[campo(c)], M.casas)}</td>`).join('') + '</tr>'
+      cens.map((c) => `<td>${fmt(r[campo(c)], M.casas)}</td>`).join('') + celCap(r.uf) + '</tr>'
     ).join('') +
     '</tbody>';
 
@@ -568,7 +595,10 @@ function renderResumo() {
     '<strong>Total</strong>: área potencial sem ponderar por cenário ' +
     '(area_potencial × 0,09 ha), zerada dentro de áreas de conservação.<br>' +
     '<strong>Cenários</strong>: mesma conta ponderada pela marcha de plantio ' +
-    '(decêndios aptos ÷ 3). Quantidade = área × produtividade média PAM ÷ 1000.';
+    '(decêndios aptos ÷ 3). Quantidade = área × produtividade média PAM ÷ 1000.<br>' +
+    '<strong>Captado</strong>: soma das células sob a união dos círculos de raio mínimo ' +
+    '(cenário, porte e raio máximo escolhidos à esquerda); sobreposição contada uma vez. ' +
+    'A UF é a da célula, não a da usina.';
 }
 
 // ---- pontos de raio minimo (grade de 10 km, 3 portes de usina) ----
@@ -693,6 +723,7 @@ function syncRaios() {
 // troca de porte/cenario/corte: so repinta e refiltra, nao recria as camadas
 function atualizaRaios() {
   limpaCirculo();   // o raio depende do porte/cenario; o circulo antigo nao vale mais
+  renderResumo();   // coluna Captado segue cenario/porte/corte
   for (const c of camadasRaios()) {
     const id = lyrRaios(c.source_layer);
     if (!map.getLayer(id)) continue;
@@ -894,11 +925,26 @@ function initRaios() {
     });
     renderRaios();
     syncRaios();
+    renderResumo();
   }).catch(() => {
     document.getElementById('raios-legenda').innerHTML =
       '<div class="hint">raio_minimo.pmtiles ausente — rode build_raio_minimo.sh e build_raio_pmtiles.sh</div>';
   });
 }
+
+// ---- colapsar/expandir barras laterais ----
+// A seta aponta para onde a barra vai: '‹' colapsa a esquerda, '›' expande de novo.
+document.querySelectorAll('.colapsar-lateral').forEach((btn) => {
+  const alvo = btn.dataset.alvo;                      // 'panel' | 'resumo'
+  const esq = alvo === 'panel';
+  btn.addEventListener('click', () => {
+    const colapsada = document.getElementById('app').classList.toggle(`colapsado-${alvo}`);
+    btn.textContent = (colapsada === esq) ? '›' : '‹';
+    btn.title = `${colapsada ? 'Expandir' : 'Colapsar'} painel ${esq ? 'esquerdo' : 'direito'}`;
+    btn.setAttribute('aria-expanded', String(!colapsada));
+    map.resize();                                     // o canvas nao percebe sozinho
+  });
+});
 
 // ---- boot ----
 renderRiscoLegend(); // estática, não depende de rede/mapa
@@ -922,4 +968,6 @@ map.on('load', async () => {
   initRaios();
   fetch('./DATA/resumo_uf.json').then((r) => r.json())
     .then((d) => { RESUMO = d; renderResumo(); }).catch(() => {});
+  fetch('./DATA/captacao_uf.json').then((r) => r.json())
+    .then((d) => { CAPTACAO = d; renderResumo(); }).catch(() => {});
 });

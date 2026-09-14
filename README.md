@@ -123,6 +123,17 @@ bash build_raio_minimo.sh     # ~3 min -> DATA/raio_minimo.geojson
 bash build_raio_pmtiles.sh    # GeoJSON -> DATA/raio_minimo.pmtiles
 ```
 
+**Captado (coluna da tabela à direita).** Produção e área sob a **união** dos círculos de
+raio mínimo visíveis (cenário × porte × corte do slider), sobreposição contada uma vez,
+por UF da célula. Para cada célula guarda-se T = menor raio que a cobre; a célula está
+na união do corte X sse T ≤ X, então um histograma de T (passo 5 km) dá as 41 posições
+do slider num passe só, na grade de 300 m. Conferido por força bruta (máscara booleana):
+bate em 1 t.
+
+```
+bash build_captacao.sh        # ~3 min -> DATA/captacao_uf.json (33 KB)
+```
+
 **Raio fixo (análise inversa).** Nos mesmos pontos, a produção captada num raio fixo
 de **100, 75 e 50 km** (`q_<cenário>_<km>`, mil t). No app, modo "Raio fixo": o slider
 vira quantidade mínima. Custa uma soma de círculo por raio — sem bisseção.
