@@ -468,7 +468,12 @@ map.on('mousemove', (e) => {
     const ids = camadasRaios().map((c) => lyrRaios(c.source_layer)).filter((id) => map.getLayer(id));
     if (ids.length) {
       const fr = map.queryRenderedFeatures(e.point, { layers: ids });
-      if (fr[0]) raioText = `${fr[0].properties[campoRaio()]} km`;
+      if (fr[0]) {
+        const v = fr[0].properties[campoRaio()];
+        raioText = raiosModo === 'fixo'
+          ? `<span class="val">Em ${raiosFixo} km:</span> ${fmt(v)} mil t`
+          : `<span class="val">Raio mínimo:</span> ${v} km`;
+      }
     }
   }
 
@@ -493,7 +498,7 @@ function paintPopup(lngLat, defs, vals, munText) {
   if (!linhas && !munText) { popup.remove(); return; }
   popup.setLngLat(lngLat).setHTML(
     `<div class="raster-popup">${linhas}` +
-    (raioAtual ? `<div><span class="val">Raio mínimo:</span> ${raioAtual}</div>` : '') +
+    (raioAtual ? `<div>${raioAtual}</div>` : '') +
     (munText ? `<div class="mun">Municipio: ${munText}</div>` : '') + `</div>`
   ).addTo(map);
 }
@@ -582,23 +587,50 @@ let raiosCenario = null;
 let raiosMeta = null;          // porte de usina em kt (120 / 600 / 2000)
 let raiosVisivel = false;
 let raiosCorte = 200;          // km; mostra so os pontos com raio <= este valor
+// Modo 'fixo' (analise inversa): raio fixo -> quantidade captada, q_<cen>_<km>
+// em mil t. O slider vira "quantidade minima", em passos de escala/q_passos.
+let raiosModo = 'minimo';      // 'minimo' | 'fixo'
+let raiosFixo = 100;           // km
+let qCortePasso = 0;           // 0..q_passos
 
 const camadasRaios = () => (RAIOS_META ? RAIOS_META.camadas : []);
 const lyrRaios = (sl) => `raios-lyr-${sl}`;
 
 const corDoRaio = (t) => String(d3.rgb(d3.interpolateViridis(t)));
+const COR_ZERO = '#dcdcdc';
+
+const escalaQ = () => (RAIOS_META.q_escala_kt || {})[String(raiosFixo)] || 1000;
+const qCorte = () => (escalaQ() * qCortePasso) / (RAIOS_META.q_passos || 40);
 
 function escalaRaio(campo) {
   const paradas = [];
+  if (raiosModo === 'fixo') {
+    // mais quantidade = amarelo (ponta "boa" da viridis, como raio curto no outro modo)
+    const esc = escalaQ();
+    for (let i = 0; i <= 8; i++) paradas.push((i / 8) * esc, corDoRaio(1 - i / 8));
+    const q = ['coalesce', ['get', campo], 0];
+    // zero = nada captado no raio: ponto continua visivel, em cinza claro
+    return ['case', ['<=', q, 0], COR_ZERO, ['interpolate', ['linear'], q, ...paradas]];
+  }
   for (let i = 0; i <= 8; i++) paradas.push((i / 8) * RAIO_MAX_ESCALA, corDoRaio(i / 8));
   return ['interpolate', ['linear'], ['coalesce', ['get', campo], RAIO_MAX_ESCALA], ...paradas];
 }
 
-function campoRaio() { return `r_${raiosCenario}_${raiosMeta}`; }
+function campoRaio() {
+  return raiosModo === 'fixo'
+    ? `q_${raiosCenario}_${raiosFixo}`
+    : `r_${raiosCenario}_${raiosMeta}`;
+}
 
 // Esconde o ponto inviavel naquela combinacao (propriedade ausente) e o que passa
 // do corte. O coalesce evita comparar null com numero, que a spec nao permite.
 function filtroRaios() {
+  if (raiosModo === 'fixo') {
+    return ['all',
+      ['has', campoRaio()],
+      ['>=', ['coalesce', ['get', campoRaio()], 0], qCorte()],
+    ];
+  }
   return ['all',
     ['has', campoRaio()],
     ['<=', ['coalesce', ['get', campoRaio()], 1e9], raiosCorte],
@@ -608,11 +640,31 @@ function filtroRaios() {
 // Conta pelo histograma cumulativo dos metadados: com PMTiles as feicoes chegam
 // sob demanda, entao nao da para contar lendo os dados no cliente.
 function contaRaios() {
-  if (!RAIOS_META || !RAIOS_META.hist_cumulativo) return null;
+  if (!RAIOS_META) return null;
+  if (raiosModo === 'fixo') {
+    const h = ((RAIOS_META.hist_q_cumulativo || {})[raiosCenario] || {})[String(raiosFixo)];
+    return h ? { vis: h[Math.min(qCortePasso, h.length - 1)], total: h[0] } : null;
+  }
+  if (!RAIOS_META.hist_cumulativo) return null;
   const h = (RAIOS_META.hist_cumulativo[raiosCenario] || {})[String(raiosMeta)];
   if (!h) return null;
   const i = Math.min(Math.round(raiosCorte / RAIOS_META.hist_passo_km), h.length - 1);
-  return h[i];
+  return { vis: h[i], total: null };
+}
+
+// o slider serve aos dois modos: raio maximo (km) ou quantidade minima (mil t)
+function syncSlider() {
+  const sld = document.getElementById('raios-corte');
+  const rot = document.getElementById('raios-corte-rotulo');
+  if (raiosModo === 'fixo') {
+    sld.min = 0; sld.max = RAIOS_META ? (RAIOS_META.q_passos || 40) : 40; sld.step = 1;
+    sld.value = qCortePasso;
+    rot.textContent = `Quantidade mínima: ${RAIOS_META ? fmt(qCorte()) : 0} mil t`;
+  } else {
+    sld.min = 0; sld.max = 200; sld.step = 5;
+    sld.value = raiosCorte;
+    rot.textContent = `Raio máximo: ${raiosCorte} km`;
+  }
 }
 
 function syncRaios() {
@@ -655,17 +707,43 @@ function renderRaios() {
   const legEl = document.getElementById('raios-legenda');
   if (!RAIOS_META) { legEl.innerHTML = '<div class="hint">Carregando…</div>'; return; }
 
-  metaEl.innerHTML = '';
-  RAIOS_META.metas_kt.forEach((m) => {
+  const modoEl = document.getElementById('raios-modo');
+  modoEl.innerHTML = '';
+  const modos = [['minimo', 'Raio mínimo']];
+  if ((RAIOS_META.raios_fixos_km || []).length) modos.push(['fixo', 'Raio fixo']);
+  modos.forEach(([chave, rot]) => {
     const lab = document.createElement('label');
-    lab.className = 'resumo-op' + (m === raiosMeta ? ' active' : '');
-    const rot = m >= 1000 ? `${(m / 1000).toLocaleString('pt-BR')} Mt/ano` : `${m} mil t/ano`;
-    lab.innerHTML = `<input type="radio" name="raios-meta" ${m === raiosMeta ? 'checked' : ''}><span>${rot}</span>`;
+    lab.className = 'resumo-op' + (chave === raiosModo ? ' active' : '');
+    lab.innerHTML = `<input type="radio" name="raios-modo" ${chave === raiosModo ? 'checked' : ''}><span>${rot}</span>`;
     lab.querySelector('input').addEventListener('change', () => {
-      raiosMeta = m; atualizaRaios(); renderRaios();
+      raiosModo = chave; syncSlider(); atualizaRaios(); renderRaios();
     });
-    metaEl.appendChild(lab);
+    modoEl.appendChild(lab);
   });
+
+  metaEl.innerHTML = '';
+  if (raiosModo === 'fixo') {
+    RAIOS_META.raios_fixos_km.forEach((rk) => {
+      const lab = document.createElement('label');
+      lab.className = 'resumo-op' + (rk === raiosFixo ? ' active' : '');
+      lab.innerHTML = `<input type="radio" name="raios-fixo" ${rk === raiosFixo ? 'checked' : ''}><span>Raio de ${rk} km</span>`;
+      lab.querySelector('input').addEventListener('change', () => {
+        raiosFixo = rk; syncSlider(); atualizaRaios(); renderRaios();
+      });
+      metaEl.appendChild(lab);
+    });
+  } else {
+    RAIOS_META.metas_kt.forEach((m) => {
+      const lab = document.createElement('label');
+      lab.className = 'resumo-op' + (m === raiosMeta ? ' active' : '');
+      const rot = m >= 1000 ? `${(m / 1000).toLocaleString('pt-BR')} Mt/ano` : `${m} mil t/ano`;
+      lab.innerHTML = `<input type="radio" name="raios-meta" ${m === raiosMeta ? 'checked' : ''}><span>${rot}</span>`;
+      lab.querySelector('input').addEventListener('change', () => {
+        raiosMeta = m; atualizaRaios(); renderRaios();
+      });
+      metaEl.appendChild(lab);
+    });
+  }
 
   cenEl.innerHTML = '';
   RAIOS_META.cenarios.forEach((nome) => {
@@ -678,18 +756,24 @@ function renderRaios() {
     cenEl.appendChild(lab);
   });
 
+  const fixo = raiosModo === 'fixo';
   const paradas = [];
-  for (let i = 0; i <= 10; i++) paradas.push(`${corDoRaio(i / 10)} ${i * 10}%`);
-  const r = (RAIOS_META.resumo[raiosCenario] || {})[String(raiosMeta)] || {};
-  const visiveis = contaRaios();
-  const total = r.viaveis || 0;
+  for (let i = 0; i <= 10; i++) paradas.push(`${corDoRaio(fixo ? 1 - i / 10 : i / 10)} ${i * 10}%`);
+  const resumoCen = RAIOS_META.resumo[raiosCenario] || {};
+  const r = resumoCen[fixo ? `raio_${raiosFixo}` : String(raiosMeta)] || {};
+  const conta = contaRaios();
+  const total = fixo ? (conta && conta.total) || 0 : r.viaveis || 0;
+  const n = (v) => v.toLocaleString('pt-BR');
   legEl.innerHTML =
     `<div class="legend-bar" style="background:linear-gradient(to right, ${paradas.join(',')})"></div>` +
-    `<div class="legend-scale"><span>0 km</span><span>${RAIO_MAX_ESCALA} km</span></div>` +
+    (fixo
+      ? `<div class="legend-scale"><span>0</span><span>≥ ${fmt(escalaQ())} mil t</span></div>` +
+        `<div class="legend-cat"><span class="legend-swatch" style="background:${COR_ZERO}"></span>Zero no raio</div>`
+      : `<div class="legend-scale"><span>0 km</span><span>${RAIO_MAX_ESCALA} km</span></div>`) +
     `<div class="legend-unit">` +
-    (visiveis === null ? `${total.toLocaleString('pt-BR')} pontos`
-      : `${visiveis.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} pontos`) +
-    ` · mediana ${r.raio_km_mediana ?? '—'} km</div>`;
+    (conta === null ? `${n(total)} pontos` : `${n(conta.vis)} de ${n(total)} pontos`) +
+    (fixo ? ` · mediana ${r.mediana_kt != null ? fmt(r.mediana_kt) : '—'} mil t em ${raiosFixo} km`
+      : ` · mediana ${r.raio_km_mediana ?? '—'} km`) + `</div>`;
 }
 
 // ---- circulo de captacao (clique num ponto) ----
@@ -727,8 +811,9 @@ function limpaCirculo() {
 }
 
 function mostraCirculo(lngLat, props) {
-  const raio = props[campoRaio()];
-  if (raio == null) return;
+  const valor = props[campoRaio()];
+  if (valor == null) return;
+  const raio = raiosModo === 'fixo' ? raiosFixo : valor;
   const src = map.getSource(CIRC_SRC);
   if (!src) return;
   src.setData({ type: 'FeatureCollection',
@@ -741,7 +826,10 @@ function mostraCirculo(lngLat, props) {
   const el = document.getElementById('raios-clique');
   if (el) {
     const area = Math.PI * raio * raio;
-    el.innerHTML = `<strong>${raio} km</strong> · ${props.uf || '?'} · ` +
+    const cab = raiosModo === 'fixo'
+      ? `<strong>${fmt(valor)} mil t</strong> em ${raio} km`
+      : `<strong>${raio} km</strong>`;
+    el.innerHTML = `${cab} · ${props.uf || '?'} · ` +
       `área do círculo ${area.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} km²`;
   }
 }
@@ -755,8 +843,9 @@ function initRaios() {
   const sld = document.getElementById('raios-corte');
   const rot = document.getElementById('raios-corte-rotulo');
   sld.addEventListener('input', () => {
-    raiosCorte = Number(sld.value);
-    rot.textContent = `Raio máximo: ${raiosCorte} km`;
+    if (raiosModo === 'fixo') qCortePasso = Number(sld.value);
+    else raiosCorte = Number(sld.value);
+    syncSlider();
     atualizaRaios();
     renderRaios();
   });

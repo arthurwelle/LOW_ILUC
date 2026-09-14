@@ -52,6 +52,9 @@ OUT = os.path.join(HERE, 'DATA', 'raio_minimo.geojson')
 # --- parametros ---
 PASSO_GRADE_M = 10_000      # quadra de 10 km (multiplo de 300 m)
 METAS_KT = [120, 600, 2000]  # portes de usina, mil toneladas/ano
+# Analise inversa: raio FIXO -> quanto se capta (mil t). Uma soma por raio, sem
+# bissecao, entao custa quase nada perto do raio minimo.
+RAIOS_FIXOS_KM = [100, 75, 50]
 TOL = 0.02                  # +-2%
 RAIO_MAX_M = 200_000
 FATOR = 3                   # agregacao 300 m -> 900 m
@@ -228,6 +231,8 @@ def main():
 
     # raios[cenario][meta_kt] -> array
     raios = {c: {m: np.full(idx.size, np.nan) for m in METAS_KT} for c in CENARIOS}
+    # quant[cenario][raio_km] -> array (mil t)
+    quant = {c: {rk: np.zeros(idx.size) for rk in RAIOS_FIXOS_KM} for c in CENARIOS}
     resumo = {}
 
     for nome, banda in CENARIOS.items():
@@ -243,6 +248,8 @@ def main():
             cy_, cx_ = int(lin_b[k]), int(col_b[k])
             # soma no raio maximo: uma vez por ponto, reusada nas tres metas
             total = som.soma(cy_, cx_, r_max_cel)
+            for rk in RAIOS_FIXOS_KM:
+                quant[nome][rk][k] = som.soma(cy_, cx_, rk * 1000 / res_busca) / 1000
             for m in METAS_KT:
                 alvo = m * 1000 * (1 - TOL)
                 if total < alvo:
@@ -270,6 +277,15 @@ def main():
                       f'| <=100km {int((rk<=100).sum()):,}')
             else:
                 print(f'      {m:>4} kt: nenhum ponto viavel')
+        for rk in RAIOS_FIXOS_KM:
+            q = quant[nome][rk]
+            resumo[nome][f'raio_{rk}'] = {
+                'mediana_kt': round(float(np.median(q)), 1),
+                'p99_kt': round(float(np.percentile(q, 99)), 1),
+                'max_kt': round(float(q.max()), 1),
+            }
+            print(f'      raio {rk:>3} km: mediana {np.median(q):8,.0f} kt | '
+                  f'p99 {np.percentile(q, 99):8,.0f} kt | max {q.max():8,.0f} kt')
 
     # --- GeoJSON ---
     src = osr.SpatialReference(); src.ImportFromEPSG(5880)
@@ -289,8 +305,13 @@ def main():
                 ok = bool(np.isfinite(r))
                 props[f'r_{nome}_{m}'] = round(float(r) / 1000, 1) if ok else None
                 alguma |= ok
-        if not alguma:
-            continue
+            for rk in RAIOS_FIXOS_KM:
+                q = float(quant[nome][rk][k])
+                props[f'q_{nome}_{rk}'] = round(q, 1)
+                alguma |= q > 0
+        # Mantem todo candidato valido, mesmo sem producao nenhuma: no modo raio
+        # fixo o zero e resultado (desenhado em cinza), nao ausencia de dado.
+        del alguma
         features.append({
             'type': 'Feature',
             'geometry': {'type': 'Point',
@@ -302,6 +323,7 @@ def main():
         'type': 'FeatureCollection',
         'metadata': {
             'metas_kt': METAS_KT, 'tolerancia': TOL,
+            'raios_fixos_km': RAIOS_FIXOS_KM,
             'raio_max_km': RAIO_MAX_M / 1000,
             'passo_grade_km': PASSO_GRADE_M / 1000,
             'res_busca_m': res_busca,

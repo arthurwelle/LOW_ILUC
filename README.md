@@ -123,6 +123,16 @@ bash build_raio_minimo.sh     # ~3 min -> DATA/raio_minimo.geojson
 bash build_raio_pmtiles.sh    # GeoJSON -> DATA/raio_minimo.pmtiles
 ```
 
+**Raio fixo (análise inversa).** Nos mesmos pontos, a produção captada num raio fixo
+de **100, 75 e 50 km** (`q_<cenário>_<km>`, mil t). No app, modo "Raio fixo": o slider
+vira quantidade mínima. Custa uma soma de círculo por raio — sem bisseção.
+
+| Raio | Mediana (cen. 30) | p99 | Máx. |
+|---|---:|---:|---:|
+| 100 km | 131 mil t | 2.228 mil t | 3.297 mil t |
+| 75 km | 58 mil t | 1.389 mil t | 2.092 mil t |
+| 50 km | 20 mil t | 693 mil t | 1.050 mil t |
+
 **Algoritmo.** A soma dentro do círculo usa *prefix sum* por linha: um círculo é uma
 pilha de segmentos de linha, então custa O(linhas) e não O(área) — para 200 km a 900 m
 são ~445 consultas em vez de ~200 mil células. Como a soma cresce com o raio, a busca é

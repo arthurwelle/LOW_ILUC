@@ -127,6 +127,9 @@ def main():
            '-dsco', 'MINZOOM=0', '-dsco', 'MAXZOOM=11',
            '-dsco', f'CONF={json.dumps(conf)}',
            '-dsco', 'MAX_FEATURES=500000',
+           # padrao do GDAL e 500 KB: tile de ponto maior que isso e DESCARTADO
+           # inteiro (buracos retangulares no z4-z5). Ponto nao simplifica.
+           '-dsco', 'MAX_SIZE=4000000',
            '-dsco', 'NAME=raio_minimo',
            '-dsco', 'DESCRIPTION=Raio minimo de captacao por quadra']
     print('\n### gerando tiles vetoriais')
@@ -173,13 +176,37 @@ def main():
                 acum.append(k)
             hist[cen][str(m)] = acum
 
+    # Raio fixo: UMA escala de cor/slider para todos os raios (p99 do maior raio,
+    # arredondado para cima em 50 kt) e contagem cumulativa de pontos com q >= limiar.
+    # Escala por raio normalizava cada mapa e escondia que 100 km capta mais que 50.
+    N_PASSOS_Q = 40
+    escala_q, hist_q = {}, {}
+    rks = meta.get('raios_fixos_km', [])
+    p99 = max((meta['resumo'][c][f'raio_{rk}']['p99_kt']
+               for c in meta['cenarios'] for rk in rks), default=0)
+    esc = max(50, -(-int(p99) // 50) * 50)
+    for rk in rks:
+        escala_q[str(rk)] = esc
+        limiares = [esc * i / N_PASSOS_Q for i in range(N_PASSOS_Q + 1)]
+        for cen in meta['cenarios']:
+            vals = sorted(f['properties'].get(f'q_{cen}_{rk}') or 0.0 for f in feats)
+            acum, k = [], 0
+            for lim in limiares:          # quantos ficam ABAIXO do limiar
+                while k < len(vals) and vals[k] < lim:
+                    k += 1
+                acum.append(len(vals) - k)
+            hist_q.setdefault(cen, {})[str(rk)] = acum
+
     mj = os.path.join(HERE, 'DATA', 'raio_minimo_meta.json')
     with open(mj, 'w', encoding='utf-8') as f:
         json.dump({**meta,
                    'camadas': [{'source_layer': n, 'minzoom': mn, 'maxzoom': mx}
                                for n, _, mn, mx in NIVEIS],
                    'hist_passo_km': PASSO_HIST,
-                   'hist_cumulativo': hist},
+                   'hist_cumulativo': hist,
+                   'q_escala_kt': escala_q,
+                   'q_passos': N_PASSOS_Q,
+                   'hist_q_cumulativo': hist_q},
                   f, ensure_ascii=False)
     print(f'  {mj}  ({os.path.getsize(mj)/1024:.1f} KB)')
 

@@ -176,6 +176,9 @@ body {
 #raios-meta { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
 #raios-cenario { display: flex; flex-direction: column; gap: 3px; margin-bottom: 4px; }
 #raios-meta .resumo-op, #raios-cenario .resumo-op { font-size: 11px; padding: 4px 7px; }
+/* modo: raio minimo x quantidade em raio fixo */
+#raios-modo { display: flex; gap: 4px; margin: 6px 0; }
+#raios-modo .resumo-op { flex: 1; font-size: 11px; padding: 4px 6px; }
 
 /* info do ponto clicado na camada de raios */
 .raios-clique { font-size: 11px; color: #2f6fed; margin: 6px 0 0; line-height: 1.4; }
