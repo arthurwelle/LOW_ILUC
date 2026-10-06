@@ -161,6 +161,19 @@ plana). Para 200 km a diferença fica em centenas de metros — invisível no ma
 
 ---
 
+## Exportação para o artigo (CSV)
+
+```
+python build_export_csv.py       # -> ../MAPBIOMAS/Usinas/OUTPUT/*.csv
+```
+
+Formato longo (uma linha por combinação), para refazer mapas e tabelas no ggplot:
+pontos com raio mínimo, pontos com quantidade em raio fixo, potencial por UF, captação
+pela união dos círculos, resumo e parâmetros da corrida. Só biblioteca padrão — não
+precisa do Python do QGIS. Dicionário dos arquivos em `OUTPUT/LEIAME.md`.
+
+---
+
 ## Estrutura
 
 ```
